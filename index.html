@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>5-Minute Workout</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: #f4f4f4;
+    }
+    h1 {
+      color: #800080;
+    }
+    #instruction {
+      font-size: 1.5rem;
+      margin: 20px;
+      text-align: center;
+      padding: 10px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      background: #800080;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background: #d874cd;
+    }
+    #progressBar {
+      width: 80%;
+      height: 10px;
+      background: #ddd;
+      border-radius: 5px;
+      margin-top: 20px;
+      overflow: hidden;
+    }
+    #progress {
+      height: 100%;
+      width: 0%;
+      background: #800080;
+      border-radius: 5px;
+      transition: width 1s linear;
+    }
+    #timer {
+      font-size: 1.2rem;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>5-Minute Workout</h1>
+  <p id="instruction">Press start to begin</p>
+  <div>
+    <button id="startBtn">Start Workout</button>
+    <button id="pauseBtn" disabled>Pause</button>
+    <button id="skipBtn" disabled>Skip</button>
+  </div>
+  <div id="progressBar"><div id="progress"></div></div>
+  <div id="timer">Time left: 5:00</div>
+
+  <script>
+    const workouts = [
+      "Lean your head to the right shoulder.",
+      "Rotate your shoulders backward.",
+      "Stretch your arms forward.",
+      "Touch your toes while standing.",
+      "Do 10 jumping jacks.",
+      "Raise your arms overhead and hold.",
+      "March in place.",
+      "Stretch your neck forward and backward.",
+      "Twist your torso side to side.",
+      "Do high knees.",
+      "Stretch your arms behind your back.",
+      "Balance on one leg.",
+      "Roll your shoulders forward.",
+      "Do light jogging in place.",
+      "Stretch your calves.",
+      "Breathe in deeply and exhale slowly.",
+      "Do 10 squats.",
+      "Raise your knees and hold for 5 seconds.",
+      "Do side bends.",
+      "Reach for the sky and hold."
+    ];
+
+    const workoutDuration = 10000; // 10 seconds per workout
+    const totalWorkoutTime = 300; // 5 minutes in seconds
+    let randomWorkouts = [];
+    let index = 0;
+    let timer = null;
+    let countdownTimer = null;
+    let remainingWorkoutTime = totalWorkoutTime;
+    let isPaused = false;
+
+    function speak(text) {
+      const msg = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(msg);
+    }
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(remainingWorkoutTime / 60);
+      const seconds = remainingWorkoutTime % 60;
+      document.getElementById('timer').textContent = `Time left: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+
+    function startCountdown() {
+      countdownTimer = setInterval(() => {
+        if (!isPaused) {
+          remainingWorkoutTime--;
+          updateTimerDisplay();
+          if (remainingWorkoutTime <= 0) {
+            clearInterval(countdownTimer);
+          }
+        }
+      }, 1000);
+    }
+
+    function updateProgressBar(elapsedTime = 0) {
+      const interval = 100;
+      const total = workoutDuration;
+      const progress = document.getElementById('progress');
+
+      clearInterval(timer);
+      timer = setInterval(() => {
+        if (!isPaused) {
+          elapsedTime += interval;
+          progress.style.width = `${(elapsedTime / total) * 100}%`;
+          if ((total - elapsedTime) <= 4000 && (elapsedTime % 1000 === 0)) {
+            const secondsLeft = Math.floor((total - elapsedTime) / 1000);
+            if (secondsLeft > 0) speak(secondsLeft.toString());
+          }
+          if (elapsedTime >= total) {
+            clearInterval(timer);
+            nextWorkout();
+          }
+        }
+      }, interval);
+    }
+
+    function nextWorkout() {
+      if (index >= randomWorkouts.length || remainingWorkoutTime <= 0) {
+        document.getElementById('instruction').textContent = "Workout complete!";
+        speak("Workout complete!");
+        document.getElementById('pauseBtn').disabled = true;
+        document.getElementById('skipBtn').disabled = true;
+        document.getElementById('progress').style.width = '100%';
+        return;
+      }
+
+      const instruction = randomWorkouts[index];
+      document.getElementById('instruction').textContent = instruction;
+      speak(instruction);
+      updateProgressBar();
+      index++;
+    }
+
+    function startWorkout() {
+      randomWorkouts = workouts.sort(() => 0.5 - Math.random()).slice(0, 20);
+      index = 0;
+      isPaused = false;
+      remainingWorkoutTime = totalWorkoutTime;
+      updateTimerDisplay();
+      document.getElementById('pauseBtn').disabled = false;
+      document.getElementById('skipBtn').disabled = false;
+      startCountdown();
+      nextWorkout();
+    }
+
+    document.getElementById('startBtn').addEventListener('click', startWorkout);
+    document.getElementById('pauseBtn').addEventListener('click', () => {
+      isPaused = !isPaused;
+      document.getElementById('pauseBtn').textContent = isPaused ? 'Resume' : 'Pause';
+    });
+    document.getElementById('skipBtn').addEventListener('click', () => {
+      clearInterval(timer);
+      nextWorkout();
+    });
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js').then(reg => {
+          console.log('Service worker registered.', reg);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
